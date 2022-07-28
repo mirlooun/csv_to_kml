@@ -9,7 +9,9 @@
   "author": "Ilja Ivanov",
   "license": "ISC",
   "dependencies": {
+    "@mapbox/togeojson": "^0.16.0",
     "csvtojson": "^2.0.10",
+    "split-string": "^6.1.0",
     "xmlbuilder": "^15.1.1"
   },
   "type": "module"

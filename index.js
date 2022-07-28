@@ -8,16 +8,22 @@ const __dirname = path.resolve();
 const files = fs.readdirSync(`${__dirname}/input`);
 
 for (const file of files) {
-    const jsonZones = await csv({ delimiter: ';' }).fromFile(`${__dirname}/input/${file}`);
+    try {
+        const jsonZones = await csv({ delimiter: 'auto' }).fromFile(`${__dirname}/input/${file}`);
 
-    const outputFileName = `${path.parse(file).name.replaceAll('_', ' ')}`;
+        const outputFileName = `${path.parse(file).name.replaceAll('_', ' ')}`;
 
-    const kmlString = composeKmlDocumentString(jsonZones, outputFileName);
-    
-    writeToKmlFile(kmlString, outputFileName);
+        const kmlString = composeKmlDocumentString(jsonZones, outputFileName);
+
+        writeToKmlFile(kmlString, outputFileName);
+    } catch (err) {
+        console.log(err);
+        console.log('unsupported file');
+        continue;
+    }
 }
 
-function composeKmlDocumentString(jsonZones, outputFileName) {
+function composeKmlDocumentString(jsonData, outputFileName) {
     const kmlTree = {
         kml: {
             '@xmlns': 'http://www.opengis.net/kml/2.2',
@@ -34,10 +40,11 @@ function composeKmlDocumentString(jsonZones, outputFileName) {
             },
             Folder: {
                 name: outputFileName,
-                Placemark: getPlacemarks(jsonZones, outputFileName)
+                Placemark: getPlacemarks(jsonData, outputFileName)
             }
         }
     };
+
     const xml = builder.create(kmlTree).end({ pretty: true });
 
     return xml;
@@ -49,7 +56,7 @@ function getPlacemarks(jsonZones, outputFileName) {
     for (const zone of jsonZones) {
         const placemark = {
             Style: {
-                LineStyle:{
+                LineStyle: {
                     color: 'ff0000ff'
                 },
                 PolyStyle: {
@@ -61,26 +68,58 @@ function getPlacemarks(jsonZones, outputFileName) {
                     '@schemaUrl': `#${outputFileName}`,
                     SimpleData: {
                         '@name': 'Zone',
-                        '#text': zone['Name']
+                        '#text': zone.Name
                     }
                 }
             },
             MultiGeometry: {
-                Polygon: {
-                    outerBoundaryIs: {
-                        LinearRing: {
-                            coordinates: {
-                                '#text': zone['Geometry Multipolygon']
-                            }
-                        }
-                    }
-                }
+                Polygon: getPolygons(zone['Geometry Multipolygon'])
             }
         }
         placemarks.push(placemark);
     }
 
     return placemarks;
+}
+
+function getPolygons(zoneCoordinates) {
+    const polygons = [];
+
+    // If coordinates string is more than 68000 chars split(')) ((') is not working
+    const zonePolygonsCoordinates = zoneCoordinates.split(' ');
+    
+    let coordsToCheck = [];
+    let tempCoords = [];
+    for (let coord of zonePolygonsCoordinates) {
+        if (coord.includes('))')) {
+            tempCoords.push(coord.replaceAll('))', ''));
+            coordsToCheck.push(tempCoords.join(' '));
+            tempCoords = [];
+            continue;
+        } else if (coord.includes('((')) {
+            coord = coord.replaceAll('((', '');
+        }
+        tempCoords.push(coord);
+    }
+
+    if (tempCoords.length !== 0) {
+        coordsToCheck.push(tempCoords.join(' '));
+    }
+
+    for (const coordinates of coordsToCheck) {
+        const Polygon = {
+            outerBoundaryIs: {
+                LinearRing: {
+                    coordinates: {
+                        '#text': coordinates
+                    }
+                }
+            }
+        }
+        polygons.push(Polygon);
+    }
+
+    return polygons;
 }
 
 function writeToKmlFile(kmlString, outputFileName) {
