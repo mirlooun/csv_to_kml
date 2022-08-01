@@ -83,8 +83,6 @@ function getPlacemarks(jsonZones, outputFileName) {
 }
 
 function getPolygons(zoneCoordinatesString) {
-    // If coordinates string is more than 68000 chars split(')) ((') is not working
-
     const polygonCoords = getPolygonCoords(zoneCoordinatesString);
 
     const xmlPolygons = [];
@@ -106,19 +104,22 @@ function getPolygons(zoneCoordinatesString) {
 }
 
 function getPolygonCoords(zoneCoordinatesString) {
+    // If coordinates string is more than 68000 chars split(')) ((') is not working
+    // I managed to write my own implementation of split function, which does the same,
+    // but doesn't bottleneck on long strings
+
     let substringStart = 0;
-    let copy = zoneCoordinatesString;
 
     const polygons = [];
 
-    for (let index = 0; index < copy.length; index++) {
-        if (copy[index] === ')') {
+    for (let index = 0; index < zoneCoordinatesString.length; index++) {
+        if (zoneCoordinatesString[index] === ')') {
             polygons.push(copy.substring(substringStart, index));
             index += 5;
             substringStart = index;
-            copy = copy.substring(substringStart);
-        } else if (index === copy.length - 1) {
-            polygons.push(copy);
+            zoneCoordinatesString = zoneCoordinatesString.substring(substringStart);
+        } else if (index === zoneCoordinatesString.length - 1) {
+            polygons.push(zoneCoordinatesString);
         }
     }
 
