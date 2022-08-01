@@ -82,31 +82,14 @@ function getPlacemarks(jsonZones, outputFileName) {
     return placemarks;
 }
 
-function getPolygons(zoneCoordinates) {
-    const polygons = [];
-
+function getPolygons(zoneCoordinatesString) {
     // If coordinates string is more than 68000 chars split(')) ((') is not working
-    const zonePolygonsCoordinates = zoneCoordinates.split(' ');
+
+    const polygonCoords = getPolygonCoords(zoneCoordinatesString);
+
+    const xmlPolygons = [];
     
-    let coordsToCheck = [];
-    let tempCoords = [];
-    for (let coord of zonePolygonsCoordinates) {
-        if (coord.includes('))')) {
-            tempCoords.push(coord.replaceAll('))', ''));
-            coordsToCheck.push(tempCoords.join(' '));
-            tempCoords = [];
-            continue;
-        } else if (coord.includes('((')) {
-            coord = coord.replaceAll('((', '');
-        }
-        tempCoords.push(coord);
-    }
-
-    if (tempCoords.length !== 0) {
-        coordsToCheck.push(tempCoords.join(' '));
-    }
-
-    for (const coordinates of coordsToCheck) {
+    for (const coordinates of polygonCoords) {
         const Polygon = {
             outerBoundaryIs: {
                 LinearRing: {
@@ -116,7 +99,27 @@ function getPolygons(zoneCoordinates) {
                 }
             }
         }
-        polygons.push(Polygon);
+        xmlPolygons.push(Polygon);
+    }
+
+    return xmlPolygons;
+}
+
+function getPolygonCoords(zoneCoordinatesString) {
+    let substringStart = 0;
+    let copy = zoneCoordinatesString;
+
+    const polygons = [];
+
+    for (let index = 0; index < copy.length; index++) {
+        if (copy[index] === ')') {
+            polygons.push(copy.substring(substringStart, index));
+            index += 5;
+            substringStart = index;
+            copy = copy.substring(substringStart);
+        } else if (index === copy.length - 1) {
+            polygons.push(copy);
+        }
     }
 
     return polygons;
