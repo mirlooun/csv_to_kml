@@ -28,24 +28,24 @@ function composeKmlDocumentString(jsonData, outputFileName) {
         kml: {
             '@xmlns': 'http://www.opengis.net/kml/2.2',
             Document: {
-                '@id': 'root_doc'
-            },
-            Schema: {
-                '@name': outputFileName,
-                '@id': outputFileName,
-                SimpleField: {
-                    '@name': 'Zone',
-                    '@type': 'string',
+                '@id': 'root_doc',
+                Schema: {
+                    '@name': outputFileName,
+                    '@id': outputFileName,
+                    SimpleField: {
+                        '@name': 'Zone',
+                        '@type': 'string',
+                    }
+                },
+                Folder: {
+                    name: outputFileName,
+                    Placemark: getPlacemarks(jsonData, outputFileName)
                 }
             },
-            Folder: {
-                name: outputFileName,
-                Placemark: getPlacemarks(jsonData, outputFileName)
-            }
         }
     };
 
-    const xml = builder.create(kmlTree).end({ pretty: true });
+    const xml = builder.create(kmlTree, { encoding: 'utf-8' }).end({ pretty: true });
 
     return xml;
 }
@@ -86,7 +86,7 @@ function getPolygons(zoneCoordinatesString) {
     const polygonCoords = getPolygonCoords(zoneCoordinatesString);
 
     const xmlPolygons = [];
-    
+
     for (const coordinates of polygonCoords) {
         const Polygon = {
             outerBoundaryIs: {
@@ -114,7 +114,7 @@ function getPolygonCoords(zoneCoordinatesString) {
 
     for (let index = 0; index < zoneCoordinatesString.length; index++) {
         if (zoneCoordinatesString[index] === ')') {
-            polygons.push(copy.substring(substringStart, index));
+            polygons.push(zoneCoordinatesString.substring(substringStart, index));
             index += 5;
             substringStart = index;
             zoneCoordinatesString = zoneCoordinatesString.substring(substringStart);
